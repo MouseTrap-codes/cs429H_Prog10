@@ -151,11 +151,11 @@ t_malloc (size_t size)
       break;
 
     case BEST_FIT:
-      // bestFit(size);
+      ptr = firstFit(size);
       break;
     
     case WORST_FIT:
-      // worstFit(size);
+      ptr = firstFit(size);
       break;
     
     case BUDDY:
