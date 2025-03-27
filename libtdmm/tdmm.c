@@ -144,9 +144,10 @@ void* worstFit(size_t size) {
 void *
 t_malloc (size_t size)
 {
+  void* ptr = NULL;
   switch (stratChosen) {
     case FIRST_FIT:
-      firstFit(size);
+      ptr = firstFit(size);
       break;
 
     case BEST_FIT:
@@ -165,7 +166,7 @@ t_malloc (size_t size)
       // printf("unknown allocation strategy/allocation type not implemented.");
       break;
   }
-  return NULL;
+  return ptr;
 }
 
 
