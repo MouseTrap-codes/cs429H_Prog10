@@ -104,16 +104,15 @@ void* firstFit(size_t size) {
 
 void* bestFit(size_t size) {
   Block* bestFitBlock = NULL;
-  bestFitBlock->size = 10000000000000;
   Block* current = blockList->head;
     int index = 0;
     while (current != NULL) {
         if (current->free && current->size >= size) {
           if (!bestFitBlock || current->size < bestFitBlock->size) {
             bestFitBlock = current;
+            break;
           }
         }
-        break;
         current = current->next;
     }
   
