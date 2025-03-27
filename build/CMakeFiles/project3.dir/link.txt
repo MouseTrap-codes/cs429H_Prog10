@@ -1,0 +1,1 @@
+/usr/bin/cc    CMakeFiles/project3.dir/main.c.o  -o project3  libtdmm/libtdmm.a 

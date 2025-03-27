@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/doublell.c
+stdio.h
+-
+stdlib.h
+-
+doublell.h
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/doublell.h
+
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/doublell.h
+stddef.h
+-
+stdbool.h
+-
+
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/tdmm.c
+tdmm.h
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/tdmm.h
+sys/mman.h
+-
+stdio.h
+-
+stdint.h
+-
+string.h
+-
+doublell.h
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/doublell.h
+
+/u/pbattini/cs429h/cs429H_Prog10/libtdmm/tdmm.h
+stddef.h
+-
+

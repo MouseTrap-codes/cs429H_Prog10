@@ -59,34 +59,6 @@ void t_init(alloc_strat_e strat) {
   blockList->count = 1;
 }
 
-
-void *
-t_malloc (size_t size)
-{
-  switch (stratChosen) {
-    case FIRST_FIT:
-      firstFit(size);
-      break;
-
-    case BEST_FIT:
-      bestFit(size);
-      break;
-    
-    case WORST_FIT:
-      worstFit(size);
-      break;
-    
-    case BUDDY:
-      worstFit(size);
-      break;
-    
-    default:
-      printf("unknown allocation strategy/allocation type not implemented.");
-      break;
-  }
-  return NULL;
-}
-
 void* firstFit(size_t size) {
   Block* firstFitBlock;
   Block* current = blockList->head;
@@ -109,7 +81,7 @@ void* firstFit(size_t size) {
       if (newBlock->next != NULL) {
           newBlock->next->prev = newBlock;
       }
-      // Update current block to be just the allocated size.
+      // update current block to be just the allocated size
       firstFitBlock->next = newBlock;
       firstFitBlock->size = size;
   }
@@ -158,6 +130,36 @@ void* worstFit(size_t size) {
     
   return worstFitBlock; 
 }
+
+
+
+void *
+t_malloc (size_t size)
+{
+  switch (stratChosen) {
+    case FIRST_FIT:
+      firstFit(size);
+      break;
+
+    case BEST_FIT:
+      bestFit(size);
+      break;
+    
+    case WORST_FIT:
+      worstFit(size);
+      break;
+    
+    case BUDDY:
+      worstFit(size);
+      break;
+    
+    default:
+      printf("unknown allocation strategy/allocation type not implemented.");
+      break;
+  }
+  return NULL;
+}
+
 
 void
 t_free (void *ptr)
