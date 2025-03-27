@@ -148,21 +148,47 @@ void* bestFit(size_t size) {
 
 
 void* worstFit(size_t size) {
-  Block* worstFitBlock;
-  worstFitBlock->size = 0;
+  Block* worstFitBlock = NULL;
   Block* current = blockList->head;
     int index = 0;
     while (current != NULL) {
-        if (current->size && current->size >= size) {
-          if (current->size > worstFitBlock->size) {
+        if (current->free && current->size >= size) {
+          if (!worstFitBlock || current->size > worstFitBlock->size) {
             worstFitBlock = current;
+            break;
           }
         }
-        break;
         current = current->next;
     }
-    
-  return worstFitBlock; 
+  
+  // check if a suitable block was found.
+  if (!worstFitBlock) {
+    // optionally, extend your mmap region or return NULL.
+    return NULL;
+  }
+
+  // if the block is large enough, split it.
+  if (worstFitBlock->size >= size + sizeof(Block) + ALIGNMENT) {
+      Block* newBlock = (Block*)((char*)worstFitBlock + sizeof(Block) + size);
+      newBlock->size = worstFitBlock->size - size - sizeof(Block);
+      newBlock->free = true;
+      newBlock->next = worstFitBlock->next;
+      newBlock->prev = worstFitBlock;
+      if (newBlock->next != NULL) {
+          newBlock->next->prev = newBlock;
+      } else {
+          // if firstFitBlock was the tail, update the tail pointer.
+          blockList->tail = newBlock;
+      }
+      worstFitBlock->next = newBlock;
+      worstFitBlock->size = size;
+  }
+
+  // mark the block as allocated.
+  worstFitBlock->free = false;
+
+  // Return pointer to the usable memory (after the block header).
+  return (void*)((char*)worstFitBlock + sizeof(Block));
 }
 
 
@@ -181,11 +207,11 @@ t_malloc (size_t size)
       break;
     
     case WORST_FIT:
-      ptr = firstFit(size);
+      ptr = worstFit(size);
       break;
     
     case BUDDY:
-      ptr = firstFit(size);
+      ptr = worstFit(size);
       break;
     
     default:
