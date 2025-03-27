@@ -299,5 +299,7 @@ t_free (void *ptr) {
 void
 t_gcollect (void)
 {
-  
+  if (munmap(mmapRegion, 16384) == -1) {
+    perror("munmap failed");
+  }
 }
