@@ -150,8 +150,10 @@ void* bestFit(size_t size) {
   
   // check if a suitable block was found.
   if (!bestFitBlock) {
-    // Optionally, extend your mmap region or return NULL.
-    return NULL;
+    bestFitBlock = extendHeap(size);
+    if (!bestFitBlock) {
+      return NULL;
+    }
   }
 
   // if the block is large enough, split it.
