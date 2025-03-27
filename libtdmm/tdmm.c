@@ -6,11 +6,18 @@
 #include "doublell.h"
 
 #define ALIGNMENT 16
+#define MAX_REGIONS 100
+
 
 alloc_strat_e stratChosen = FIRST_FIT; // default
 void* mmapRegion = NULL;
 
 BlockList* blockList = NULL;
+
+// global arrays to track all regions obtained by mmap
+void* regions[MAX_REGIONS];
+size_t regionSizes[MAX_REGIONS];
+size_t regionCount = 0;
 
 void* align_ptr(void* ptr, size_t alignment) {
   uintptr_t addr = (uintptr_t)ptr;
@@ -30,8 +37,12 @@ void t_init(alloc_strat_e strat) {
     return;
   }
 
-  // Reserve space for BlockList at the beginning of mmapRegion.
-  // This avoids calling malloc.
+  // track the initial region.
+  regions[regionCount] = mmapRegion;
+  regionSizes[regionCount] = totalSize;
+  regionCount++;
+
+  // reserve space for BlockList at the beginning of mmapRegion.
   blockList = (BlockList*)mmapRegion;
   blockList->head = NULL;
   blockList->tail = NULL;
@@ -65,6 +76,16 @@ Block* extendHeap(size_t size) {
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (newRegion == MAP_FAILED) {
       perror("mmap in extend_heap failed");
+      return NULL;
+  }
+
+  // Track this new region.
+  if (regionCount < MAX_REGIONS) {
+    regions[regionCount] = newRegion;
+    regionSizes[regionCount] = newRegionSize;
+    regionCount++;
+  } else {
+      fprintf(stderr, "Exceeded maximum region tracking!\n");
       return NULL;
   }
   
@@ -299,5 +320,10 @@ t_free (void *ptr) {
 void
 t_gcollect (void)
 {
-  // TODO: Implement this
+  for (size_t i = 0; i < regionCount; i++) {
+    if (munmap(regions[i], regionSizes[i]) == -1) {
+      perror("munmap failed");
+    }
+  }
+  regionCount = 0;
 }
