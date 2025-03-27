@@ -60,19 +60,26 @@ void t_init(alloc_strat_e strat) {
 }
 
 void* firstFit(size_t size) {
-  Block* firstFitBlock;
+  Block* firstFitBlock = NULL;
   Block* current = blockList->head;
-    int index = 0;
-    while (current != NULL) {
-        if (current->free && current->size >= size) {
+  
+  // find the first free block that fits the requested size.
+  while (current != NULL) {
+      if (current->free && current->size >= size) {
           firstFitBlock = current;
           break;
-        }
-        current = current->next;
-    }
-
-    if (firstFitBlock->size >= size + sizeof(Block) + ALIGNMENT) {
-      // calculate the address for the new free block.
+      }
+      current = current->next;
+  }
+  
+  // check if a suitable block was found.
+  if (!firstFitBlock) {
+      // Optionally, extend your mmap region or return NULL.
+      return NULL;
+  }
+  
+  // if the block is large enough, split it.
+  if (firstFitBlock->size >= size + sizeof(Block) + ALIGNMENT) {
       Block* newBlock = (Block*)((char*)firstFitBlock + sizeof(Block) + size);
       newBlock->size = firstFitBlock->size - size - sizeof(Block);
       newBlock->free = true;
@@ -80,17 +87,18 @@ void* firstFit(size_t size) {
       newBlock->prev = firstFitBlock;
       if (newBlock->next != NULL) {
           newBlock->next->prev = newBlock;
+      } else {
+          // if firstFitBlock was the tail, update the tail pointer.
+          blockList->tail = newBlock;
       }
-      // update current block to be just the allocated size
       firstFitBlock->next = newBlock;
       firstFitBlock->size = size;
   }
   
-  // Mark the block as allocated.
+  // mark the block as allocated.
   firstFitBlock->free = false;
   
-  // Return a pointer to the memory available for the user,
-  // typically just after the block header.
+  // Return pointer to the usable memory (after the block header).
   return (void*)((char*)firstFitBlock + sizeof(Block));
 }
 
