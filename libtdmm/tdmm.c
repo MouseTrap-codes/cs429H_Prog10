@@ -159,7 +159,7 @@ t_malloc (size_t size)
       break;
     
     case BUDDY:
-      // worstFit(size);
+      ptr = firstFit(size);
       break;
     
     default:
