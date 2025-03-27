@@ -176,6 +176,43 @@ t_free (void *ptr)
   // TODO: Implement this
 }
 
+void t_free(void *ptr) {
+  if (!ptr) return; 
+
+  // step 1: Get the block header from the user pointer.
+  Block *block = (Block *)((char *)ptr - sizeof(Block));
+
+  // step 2: Mark the block as free
+  block->free = true;
+
+  // step 3: Coalesce with previous block if it's free
+  if (block->prev && block->prev->free) {
+      Block *prev = block->prev;
+      // merge current block into previous block:
+      prev->size += sizeof(Block) + block->size;
+      prev->next = block->next;
+      if (block->next) {
+          block->next->prev = prev;
+      } else {
+          // update tail pointer if needed.
+          blockList->tail = prev;
+      }
+      block = prev;  // use the merged block for further coalescing.
+  }
+
+  // step 4: coalesce with next block if it's free.
+  if (block->next && block->next->free) {
+      Block *next = block->next;
+      block->size += sizeof(Block) + next->size;
+      block->next = next->next;
+      if (next->next) {
+          next->next->prev = block;
+      } else {
+          blockList->tail = block;
+      }
+  }
+}
+
 void
 t_gcollect (void)
 {
