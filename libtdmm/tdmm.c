@@ -150,19 +150,19 @@ t_malloc (size_t size)
       break;
 
     case BEST_FIT:
-      bestFit(size);
+      // bestFit(size);
       break;
     
     case WORST_FIT:
-      worstFit(size);
+      // worstFit(size);
       break;
     
     case BUDDY:
-      worstFit(size);
+      // worstFit(size);
       break;
     
     default:
-      printf("unknown allocation strategy/allocation type not implemented.");
+      // printf("unknown allocation strategy/allocation type not implemented.");
       break;
   }
   return NULL;
