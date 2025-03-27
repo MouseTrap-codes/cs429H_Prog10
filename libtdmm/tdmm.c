@@ -7,10 +7,6 @@
 
 #define ALIGNMENT 16
 
-
-
-#define ALIGNMENT 16
-
 alloc_strat_e stratChosen = FIRST_FIT; // default
 void* mmapRegion = NULL;
 
@@ -59,6 +55,40 @@ void t_init(alloc_strat_e strat) {
   blockList->count = 1;
 }
 
+Block* extendHeap(size_t size) {
+  // Choose a new region size: either a minimum (e.g., 16384 bytes) or just big enough for the request.
+  size_t minRegionSize = 16384;
+  size_t newRegionSize = (size + sizeof(Block) + ALIGNMENT) * 2;
+  
+  // Allocate a new region with mmap.
+  void* newRegion = mmap(NULL, newRegionSize, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (newRegion == MAP_FAILED) {
+      perror("mmap in extend_heap failed");
+      return NULL;
+  }
+  
+  // Align the pointer (if needed) and initialize a new free block.
+  Block* newBlock = (Block*) align_ptr(newRegion, ALIGNMENT);
+  size_t overhead = (char*)newBlock - (char*)newRegion;
+  newBlock->size = newRegionSize - overhead - sizeof(Block);
+  newBlock->free = true;
+  newBlock->prev = blockList->tail;  // Link this block to the end of our list.
+  newBlock->next = NULL;
+  
+  // Insert newBlock at the end of the block list.
+  if (blockList->tail) {
+      blockList->tail->next = newBlock;
+  } else {
+      // In case blockList was empty.
+      blockList->head = newBlock;
+  }
+  blockList->tail = newBlock;
+  blockList->count++;
+  
+  return newBlock;
+}
+
 void* firstFit(size_t size) {
   Block* firstFitBlock = NULL;
   Block* current = blockList->head;
@@ -74,8 +104,10 @@ void* firstFit(size_t size) {
   
   // check if a suitable block was found.
   if (!firstFitBlock) {
-      // Optionally, extend your mmap region or return NULL.
-      return NULL;
+      firstFitBlock = extendHeap(size);
+      if (!firstFitBlock) { // getting more memory from the OS through mmap did not work
+        return NULL;
+      }
   }
   
   // if the block is large enough, split it.
