@@ -117,7 +117,34 @@ void* bestFit(size_t size) {
         current = current->next;
     }
   
-  return bestFitBlock;
+  // check if a suitable block was found.
+  if (!bestFitBlock) {
+    // Optionally, extend your mmap region or return NULL.
+    return NULL;
+  }
+
+  // if the block is large enough, split it.
+  if (bestFitBlock->size >= size + sizeof(Block) + ALIGNMENT) {
+      Block* newBlock = (Block*)((char*)bestFitBlock + sizeof(Block) + size);
+      newBlock->size = bestFitBlock->size - size - sizeof(Block);
+      newBlock->free = true;
+      newBlock->next = bestFitBlock->next;
+      newBlock->prev = bestFitBlock;
+      if (newBlock->next != NULL) {
+          newBlock->next->prev = newBlock;
+      } else {
+          // if firstFitBlock was the tail, update the tail pointer.
+          blockList->tail = newBlock;
+      }
+      bestFitBlock->next = newBlock;
+      bestFitBlock->size = size;
+  }
+
+  // mark the block as allocated.
+  bestFitBlock->free = false;
+
+  // Return pointer to the usable memory (after the block header).
+  return (void*)((char*)bestFitBlock + sizeof(Block));
 }
 
 
@@ -151,7 +178,7 @@ t_malloc (size_t size)
       break;
 
     case BEST_FIT:
-      ptr = firstFit(size);
+      ptr = bestFit(size);
       break;
     
     case WORST_FIT:
@@ -170,13 +197,8 @@ t_malloc (size_t size)
 }
 
 
-// void
-// t_free (void *ptr)
-// {
-//   // TODO: Implement this
-// }
-
-void t_free(void *ptr) {
+void 
+t_free (void *ptr) {
   if (!ptr) return; 
 
   // step 1: Get the block header from the user pointer.
