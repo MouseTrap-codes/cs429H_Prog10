@@ -6,11 +6,21 @@
 
 #IncludeRegexTransform: 
 
+../libtdmm/doublell.h
+stddef.h
+-
+stdbool.h
+-
+
 ../libtdmm/tdmm.h
 stddef.h
 -
 
 /u/pbattini/cs429h/cs429H_Prog10/main.c
+stdio.h
+-
 tdmm.h
 /u/pbattini/cs429h/cs429H_Prog10/tdmm.h
+doublell.h
+/u/pbattini/cs429h/cs429H_Prog10/doublell.h
 
