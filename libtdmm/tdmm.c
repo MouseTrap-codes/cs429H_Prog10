@@ -170,11 +170,11 @@ t_malloc (size_t size)
 }
 
 
-void
-t_free (void *ptr)
-{
-  // TODO: Implement this
-}
+// void
+// t_free (void *ptr)
+// {
+//   // TODO: Implement this
+// }
 
 void t_free(void *ptr) {
   if (!ptr) return; 
