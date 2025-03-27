@@ -148,7 +148,7 @@ void* bestFit(size_t size) {
         current = current->next;
     }
   
-  // check if a suitable block was found.
+  // get more memory if needed
   if (!bestFitBlock) {
     bestFitBlock = extendHeap(size);
     if (!bestFitBlock) {
@@ -195,10 +195,12 @@ void* worstFit(size_t size) {
         current = current->next;
     }
   
-  // check if a suitable block was found.
+  // get more memory if needed
   if (!worstFitBlock) {
-    // optionally, extend your mmap region or return NULL.
-    return NULL;
+    worstFitBlock = extendHeap(size);
+    if (!worstFitBlock) {
+      return NULL;
+    }
   }
 
   // if the block is large enough, split it.
