@@ -12,13 +12,20 @@ extern void* mmapRegion;
 
 #define CSV_FILENAME "allocator_report.csv"
 
-// Helper: Convert a string argument into an allocation strategy.
+// Global variable to store the current strategy as a string.
+char current_strategy[16];
+
+// Helper: Convert a string argument into an allocation strategy,
+// and record the strategy name.
 alloc_strat_e get_strategy(const char *str) {
-    if (strcmp(str, "best") == 0)
+    if (strcmp(str, "best") == 0) {
+        strcpy(current_strategy, "BEST_FIT");
         return BEST_FIT;
-    else if (strcmp(str, "worst") == 0)
+    } else if (strcmp(str, "worst") == 0) {
+        strcpy(current_strategy, "WORST_FIT");
         return WORST_FIT;
-    // Default to FIRST_FIT if unrecognized or "first" is provided.
+    }
+    strcpy(current_strategy, "FIRST_FIT");
     return FIRST_FIT;
 }
 
@@ -38,14 +45,17 @@ void get_memory_metrics(size_t *totalMemory, size_t *allocatedMemory, int *block
 }
 
 // Helper: Log an event to the CSV file.
+// The CSV now includes a Strategy column.
 void log_event(FILE *csv, const char *event, const char *operation, size_t size, void *ptr, double opTime) {
     size_t totalMemory = 0, allocatedMemory = 0;
     int blockCount = 0;
     get_memory_metrics(&totalMemory, &allocatedMemory, &blockCount);
     double utilization = (totalMemory > 0) ? ((double)allocatedMemory / totalMemory) * 100.0 : 0.0;
     
-    // CSV columns: Event, Operation, BlockSize, Pointer, OperationTime(s), TotalMemory, AllocatedMemory, Utilization(%), BlockCount
-    fprintf(csv, "%s,%s,%zu,%p,%.8f,%zu,%zu,%.2f,%d\n", event, operation, size, ptr, opTime, totalMemory, allocatedMemory, utilization, blockCount);
+    // CSV columns: Strategy, Event, Operation, BlockSize, Pointer, OpTime(s), TotalMemory, AllocatedMemory, Utilization(%), BlockCount
+    fprintf(csv, "%s,%s,%s,%zu,%p,%.8f,%zu,%zu,%.2f,%d\n",
+            current_strategy, event, operation, size, ptr, opTime,
+            totalMemory, allocatedMemory, utilization, blockCount);
     fflush(csv);
 }
 
@@ -56,23 +66,19 @@ int main(int argc, char *argv[]) {
         perror("Failed to open CSV file for writing");
         return EXIT_FAILURE;
     }
-    // Write CSV header (note the escaped %% for percent sign).
-    fprintf(csv, "Event,Operation,BlockSize,Pointer,OpTime(s),TotalMemory,AllocatedMemory,Utilization(%%),BlockCount\n");
+    // Write CSV header (include Strategy column).
+    fprintf(csv, "Strategy,Event,Operation,BlockSize,Pointer,OpTime(s),TotalMemory,AllocatedMemory,Utilization(%%),BlockCount\n");
 
     // Determine allocation strategy from command-line argument.
     alloc_strat_e strategy = FIRST_FIT;
     if (argc > 1) {
         strategy = get_strategy(argv[1]);
+    } else {
+        strcpy(current_strategy, "FIRST_FIT");
     }
 
     // Display chosen strategy.
-    printf("Initializing memory allocator with strategy: ");
-    switch(strategy) {
-        case FIRST_FIT: printf("FIRST_FIT\n"); break;
-        case BEST_FIT:  printf("BEST_FIT\n");  break;
-        case WORST_FIT: printf("WORST_FIT\n"); break;
-        default:        printf("UNKNOWN (using FIRST_FIT)\n"); break;
-    }
+    printf("Initializing memory allocator with strategy: %s\n", current_strategy);
 
     // Record initialization event.
     clock_t initStart = clock();
@@ -81,11 +87,14 @@ int main(int argc, char *argv[]) {
     double initTime = (double)(initEnd - initStart) / CLOCKS_PER_SEC;
     log_event(csv, "Initialization", "t_init", 0, mmapRegion, initTime);
 
+    clock_t start, end;
+    double opTime;
+
     // Test 1: Allocate 100 bytes.
-    clock_t start = clock();
+    start = clock();
     void *p1 = t_malloc(100);
-    clock_t end = clock();
-    double opTime = (double)(end - start) / CLOCKS_PER_SEC;
+    end = clock();
+    opTime = (double)(end - start) / CLOCKS_PER_SEC;
     if (!p1) {
         fprintf(stderr, "Allocation of 100 bytes failed.\n");
         fclose(csv);
@@ -117,7 +126,7 @@ int main(int argc, char *argv[]) {
     log_event(csv, "Deallocation", "t_free", 100, p1, opTime);
     printf("Freed block at %p\n", p1);
 
-    // Test 4: Allocate 50 bytes (to potentially reuse the freed space).
+    // Test 4: Allocate 50 bytes (to potentially reuse freed space).
     start = clock();
     void *p3 = t_malloc(50);
     end = clock();
@@ -189,10 +198,8 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Performance test: Allocation of %zu bytes failed.\n", size);
             continue;
         }
-        // Optionally, write something into the allocated memory.
         memset(ptr, 0, size);
         log_event(csv, "Allocation", "t_malloc", size, ptr, opTime);
-        // Immediately free the block.
         start = clock();
         t_free(ptr);
         end = clock();
@@ -201,7 +208,6 @@ int main(int argc, char *argv[]) {
         printf("Performance test: Allocated and freed %zu bytes in %.8f seconds\n", size, opTime);
     }
 
-    // End of tests.
     printf("Memory allocation tests completed successfully.\n");
     fclose(csv);
     return EXIT_SUCCESS;
