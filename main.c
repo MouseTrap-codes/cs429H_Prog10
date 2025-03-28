@@ -45,17 +45,20 @@ void get_memory_metrics(size_t *totalMemory, size_t *allocatedMemory, int *block
 }
 
 // Helper: Log an event to the CSV file.
-// The CSV now includes a Strategy column.
+// This now includes a new column "OverheadBytes".
 void log_event(FILE *csv, const char *event, const char *operation, size_t size, void *ptr, double opTime) {
     size_t totalMemory = 0, allocatedMemory = 0;
     int blockCount = 0;
     get_memory_metrics(&totalMemory, &allocatedMemory, &blockCount);
     double utilization = (totalMemory > 0) ? ((double)allocatedMemory / totalMemory) * 100.0 : 0.0;
     
-    // CSV columns: Strategy, Event, Operation, BlockSize, Pointer, OpTime(s), TotalMemory, AllocatedMemory, Utilization(%), BlockCount
-    fprintf(csv, "%s,%s,%s,%zu,%p,%.8f,%zu,%zu,%.2f,%d\n",
+    // Calculate overhead as the size of BlockList plus each Block's overhead.
+    size_t overhead = sizeof(BlockList) + blockCount * sizeof(Block);
+    
+    // CSV columns: Strategy, Event, Operation, BlockSize, Pointer, OpTime(s), TotalMemory, AllocatedMemory, Utilization(%), BlockCount, OverheadBytes
+    fprintf(csv, "%s,%s,%s,%zu,%p,%.8f,%zu,%zu,%.2f,%d,%zu\n",
             current_strategy, event, operation, size, ptr, opTime,
-            totalMemory, allocatedMemory, utilization, blockCount);
+            totalMemory, allocatedMemory, utilization, blockCount, overhead);
     fflush(csv);
 }
 
@@ -66,8 +69,8 @@ int main(int argc, char *argv[]) {
         perror("Failed to open CSV file for writing");
         return EXIT_FAILURE;
     }
-    // Write CSV header (include Strategy column).
-    fprintf(csv, "Strategy,Event,Operation,BlockSize,Pointer,OpTime(s),TotalMemory,AllocatedMemory,Utilization(%%),BlockCount\n");
+    // Write CSV header (include the OverheadBytes column).
+    fprintf(csv, "Strategy,Event,Operation,BlockSize,Pointer,OpTime(s),TotalMemory,AllocatedMemory,Utilization(%%),BlockCount,OverheadBytes\n");
 
     // Determine allocation strategy from command-line argument.
     alloc_strat_e strategy = FIRST_FIT;
@@ -126,7 +129,7 @@ int main(int argc, char *argv[]) {
     log_event(csv, "Deallocation", "t_free", 100, p1, opTime);
     printf("Freed block at %p\n", p1);
 
-    // Test 4: Allocate 50 bytes (to potentially reuse freed space).
+    // Test 4: Allocate 50 bytes (to potentially reuse the freed space).
     start = clock();
     void *p3 = t_malloc(50);
     end = clock();
