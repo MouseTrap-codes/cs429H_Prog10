@@ -17,10 +17,18 @@ stddef.h
 -
 
 /u/pbattini/cs429h/cs429H_Prog10/main.c
-tdmm.h
-/u/pbattini/cs429h/cs429H_Prog10/tdmm.h
 stdio.h
 -
-doublell.h
+stdlib.h
 -
+string.h
+-
+time.h
+-
+math.h
+-
+tdmm.h
+/u/pbattini/cs429h/cs429H_Prog10/tdmm.h
+doublell.h
+/u/pbattini/cs429h/cs429H_Prog10/doublell.h
 
