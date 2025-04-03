@@ -11,6 +11,8 @@ alloc_strat_e stratChosen = FIRST_FIT; // default
 void* mmapRegion = NULL;
 
 BlockList* blockList = NULL;
+static int sequential_counter = 0; // for sequential allocation round robin
+
 
 void* align_ptr(void* ptr, size_t alignment) {
   uintptr_t addr = (uintptr_t)ptr;
@@ -249,7 +251,39 @@ t_malloc (size_t size)
     case BUDDY:
       ptr = worstFit(size);
       break;
-    
+      case SEQUENTIAL: {
+        // Sequential allocation: use round-robin among firstFit, bestFit, and worstFit.
+        int method = sequential_counter % 3;
+        sequential_counter++;
+        switch (method) {
+          case 0:
+            ptr = firstFit(size);
+            break;
+          case 1:
+            ptr = bestFit(size);
+            break;
+          case 2:
+            ptr = worstFit(size);
+            break;
+        }
+        break;
+      }
+      case RANDOM: {
+        // Random allocation: choose one of the three methods at random.
+        int method = rand() % 3;
+        switch (method) {
+          case 0:
+            ptr = firstFit(size);
+            break;
+          case 1:
+            ptr = bestFit(size);
+            break;
+          case 2:
+            ptr = worstFit(size);
+            break;
+        }
+        break;
+      }
     default:
       // printf("unknown allocation strategy/allocation type not implemented.");
       break;

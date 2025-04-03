@@ -8,7 +8,9 @@ typedef enum
   FIRST_FIT,
   BEST_FIT,
   WORST_FIT,
-  BUDDY
+  BUDDY,
+  SEQUENTIAL,
+  RANDOM
 } alloc_strat_e;
 
 /**
