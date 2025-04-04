@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "doublell.h"
+#include <stdlib.h>
+
 
 #define ALIGNMENT 16
 
