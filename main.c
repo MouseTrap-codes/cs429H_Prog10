@@ -24,6 +24,12 @@ alloc_strat_e get_strategy(const char *str) {
     } else if (strcmp(str, "worst") == 0) {
         strcpy(current_strategy, "WORST_FIT");
         return WORST_FIT;
+    } else if (strcmp(str, "sequential") == 0) {
+        strcpy(current_strategy, "SEQUENTIAL");
+        return SEQUENTIAL;
+    } else if (strcmp(str, "random") == 0) {
+        strcpy(current_strategy, "RANDOM");
+        return RANDOM;
     }
     strcpy(current_strategy, "FIRST_FIT");
     return FIRST_FIT;
@@ -63,6 +69,9 @@ void log_event(FILE *csv, const char *event, const char *operation, size_t size,
 }
 
 int main(int argc, char *argv[]) {
+    // Seed the random number generator for tests that use randomness.
+    srand(time(NULL));
+
     // Open CSV file for logging results.
     FILE *csv = fopen(CSV_FILENAME, "w");
     if (!csv) {
@@ -92,6 +101,10 @@ int main(int argc, char *argv[]) {
 
     clock_t start, end;
     double opTime;
+
+    // ---------------------------
+    // Sequential Allocation Tests
+    // ---------------------------
 
     // Test 1: Allocate 100 bytes.
     start = clock();
@@ -158,10 +171,10 @@ int main(int argc, char *argv[]) {
     log_event(csv, "Deallocation", "t_free", 50, p3, opTime);
     printf("Freed block at %p\n", p3);
 
-    // Additional Test: Allocate and free multiple blocks.
+    // Additional Test: Allocate and free multiple blocks sequentially.
     #define NUM_BLOCKS 10
     void *blocks[NUM_BLOCKS];
-    printf("Allocating %d blocks of increasing size...\n", NUM_BLOCKS);
+    printf("Sequential Test: Allocating %d blocks of increasing size...\n", NUM_BLOCKS);
     for (int i = 0; i < NUM_BLOCKS; i++) {
         size_t size = (i + 1) * 10;  // sizes: 10, 20, ... 100 bytes.
         start = clock();
@@ -209,6 +222,95 @@ int main(int argc, char *argv[]) {
         opTime = (double)(end - start) / CLOCKS_PER_SEC;
         log_event(csv, "Deallocation", "t_free", size, ptr, opTime);
         printf("Performance test: Allocated and freed %zu bytes in %.8f seconds\n", size, opTime);
+    }
+
+    // ---------------------------------
+    // Random Deallocation Allocation Test
+    // ---------------------------------
+    #define NUM_RANDOM_BLOCKS 20
+    void *randomBlocks[NUM_RANDOM_BLOCKS];
+    printf("Random Test: Allocating %d blocks of increasing size...\n", NUM_RANDOM_BLOCKS);
+    for (int i = 0; i < NUM_RANDOM_BLOCKS; i++) {
+        size_t size = (i + 1) * 15;  // arbitrary sizes.
+        start = clock();
+        randomBlocks[i] = t_malloc(size);
+        end = clock();
+        opTime = (double)(end - start) / CLOCKS_PER_SEC;
+        if (!randomBlocks[i]) {
+            fprintf(stderr, "Random allocation test: Allocation failed for block %d (size %zu bytes).\n", i, size);
+            fclose(csv);
+            return EXIT_FAILURE;
+        }
+        memset(randomBlocks[i], 'a' + (i % 26), size);
+        log_event(csv, "Allocation", "t_malloc", size, randomBlocks[i], opTime);
+        printf("Allocated random block %d of size %zu bytes at %p\n", i, size, randomBlocks[i]);
+    }
+    // Shuffle the indices using Fisher–Yates.
+    int indices[NUM_RANDOM_BLOCKS];
+    for (int i = 0; i < NUM_RANDOM_BLOCKS; i++)
+        indices[i] = i;
+    for (int i = NUM_RANDOM_BLOCKS - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = temp;
+    }
+    // Free the blocks in random order.
+    for (int i = 0; i < NUM_RANDOM_BLOCKS; i++) {
+        int idx = indices[i];
+        start = clock();
+        t_free(randomBlocks[idx]);
+        end = clock();
+        opTime = (double)(end - start) / CLOCKS_PER_SEC;
+        size_t size = (idx + 1) * 15;
+        log_event(csv, "Deallocation", "t_free", size, randomBlocks[idx], opTime);
+        printf("Freed random block %d (index %d) at %p\n", i, idx, randomBlocks[idx]);
+    }
+
+    // -------------------------
+    // Mixed Allocation Test (Random Allocation/Deallocation)
+    // -------------------------
+    #define NUM_MIXED_OPS 50
+    void *mixedBlocks[NUM_MIXED_OPS];
+    int mixedCount = 0;
+    printf("Mixed Test: Starting %d random allocation/deallocation operations...\n", NUM_MIXED_OPS);
+    for (int i = 0; i < NUM_MIXED_OPS; i++) {
+        if (mixedCount == 0 || (rand() % 2 == 0 && mixedCount < NUM_MIXED_OPS)) {
+            // Allocate a block with a random size between 1 and 100 bytes.
+            size_t size = (rand() % 100) + 1;
+            start = clock();
+            void *p = t_malloc(size);
+            end = clock();
+            opTime = (double)(end - start) / CLOCKS_PER_SEC;
+            if (!p) {
+                fprintf(stderr, "Mixed test: Allocation of %zu bytes failed.\n", size);
+                continue;
+            }
+            memset(p, 'X', size);
+            mixedBlocks[mixedCount++] = p;
+            log_event(csv, "Allocation", "t_malloc", size, p, opTime);
+            printf("Mixed Test: Allocated %zu bytes at %p\n", size, p);
+        } else {
+            // Free a random block from those allocated.
+            int idx = rand() % mixedCount;
+            start = clock();
+            t_free(mixedBlocks[idx]);
+            end = clock();
+            opTime = (double)(end - start) / CLOCKS_PER_SEC;
+            log_event(csv, "Deallocation", "t_free", 0, mixedBlocks[idx], opTime);
+            printf("Mixed Test: Freed block at %p\n", mixedBlocks[idx]);
+            // Remove the freed block by replacing it with the last element.
+            mixedBlocks[idx] = mixedBlocks[--mixedCount];
+        }
+    }
+    // Free any remaining blocks.
+    for (int i = 0; i < mixedCount; i++) {
+        start = clock();
+        t_free(mixedBlocks[i]);
+        end = clock();
+        opTime = (double)(end - start) / CLOCKS_PER_SEC;
+        log_event(csv, "Deallocation", "t_free", 0, mixedBlocks[i], opTime);
+        printf("Mixed Test: Freed remaining block at %p\n", mixedBlocks[i]);
     }
 
     printf("Memory allocation tests completed successfully.\n");
